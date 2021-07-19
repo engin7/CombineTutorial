@@ -15,7 +15,7 @@ class MainViewController: UIViewController {
   @IBOutlet weak var itemAdd: UIBarButtonItem!
 
   // MARK: - Private properties
-  
+    // 1- subscriptions is the collection where you will store any UI subscriptions tied to the lifecycle of the current view controller. AnyCancellable is a type-erased type to allow storing cancelables of different types in the same collection.
     private var subscriptions = Set<AnyCancellable>()
     private let images = CurrentValueSubject<[UIImage], Never>([])
 
@@ -47,6 +47,10 @@ class MainViewController: UIViewController {
   }
   
   @IBAction func actionAdd() {
+    
+    // add newImages to the current images array value and send that value through the subject, so all subscribers receive it.
+    let newImages = images.value + [UIImage(named: "IMG_1907.jpg")!]
+    images.send(newImages)
     
   }
   
