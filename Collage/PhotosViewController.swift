@@ -1,41 +1,20 @@
-/// Copyright (c) 2020 Razeware LLC
-///
-/// Permission is hereby granted, free of charge, to any person obtaining a copy
-/// of this software and associated documentation files (the "Software"), to deal
-/// in the Software without restriction, including without limitation the rights
-/// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-/// copies of the Software, and to permit persons to whom the Software is
-/// furnished to do so, subject to the following conditions:
-///
-/// The above copyright notice and this permission notice shall be included in
-/// all copies or substantial portions of the Software.
-///
-/// Notwithstanding the foregoing, you may not use, copy, modify, merge, publish,
-/// distribute, sublicense, create a derivative work, and/or sell copies of the
-/// Software in any work that is designed, intended, or marketed for pedagogical or
-/// instructional purposes related to programming, coding, application development,
-/// or information technology.  Permission for such use, copying, modification,
-/// merger, publication, distribution, sublicensing, creation of derivative works,
-/// or sale is expressly withheld.
-///
-/// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-/// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-/// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-/// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-/// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-/// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-/// THE SOFTWARE.
-
 import UIKit
 import Photos
+import Combine
 
 class PhotosViewController: UICollectionViewController {
   
   // MARK: - Public properties
-  
-  
+    // This code allows the current type to use selectedPhotosSubject to send values while other types can only access the type-erased selectedPhotos to subscribe
+     var selectedPhotos: AnyPublisher<UIImage, Never> {
+      return selectedPhotosSubject.eraseToAnyPublisher()
+    }
+ 
   // MARK: - Private properties
-    
+    // Exposing a publisher publicly by abstracting a private subject.
+    private let selectedPhotosSubject =
+     PassthroughSubject<UIImage, Never>()
+
   private lazy var photos = PhotosViewController.loadPhotos()
   private lazy var imageManager = PHCachingImageManager()
   
@@ -64,6 +43,7 @@ class PhotosViewController: UICollectionViewController {
   
   override func viewWillDisappear(_ animated: Bool) {
     super.viewWillDisappear(animated)
+    selectedPhotosSubject.send(completion: .finished)
   }
     
   // MARK: - UICollectionViewDataSource
@@ -94,7 +74,7 @@ class PhotosViewController: UICollectionViewController {
     if let cell = collectionView.cellForItem(at: indexPath) as? PhotoCell {
       cell.flash()
     }
-    
+
     imageManager.requestImage(for: asset, targetSize: view.frame.size, contentMode: .aspectFill, options: nil, resultHandler: { [weak self] image, info in
       guard let self = self,
         let image = image,
@@ -105,9 +85,9 @@ class PhotosViewController: UICollectionViewController {
         // Skip the thumbnail version of the asset
         return
       }
-      
-      // Send the selected photo
-      
+        // we send the selected images from gallery to our private subject
+        self.selectedPhotosSubject.send(image)
+
     })
   }
 
