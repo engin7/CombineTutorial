@@ -16,6 +16,9 @@ class MainViewController: UIViewController {
 
   // MARK: - Private properties
   
+    private var subscriptions = Set<AnyCancellable>()
+    private let images = CurrentValueSubject<[UIImage], Never>([])
+
 
   // MARK: - View controller
   
