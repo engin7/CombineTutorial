@@ -10,6 +10,8 @@ class PhotosViewController: UICollectionViewController {
       return selectedPhotosSubject.eraseToAnyPublisher()
     }
  
+    @Published var selectedPhotosCount = 0
+    
   // MARK: - Private properties
     // Exposing a publisher publicly by abstracting a private subject.
     private let selectedPhotosSubject =
@@ -87,6 +89,7 @@ class PhotosViewController: UICollectionViewController {
       }
         // we send the selected images from gallery to our private subject
         self.selectedPhotosSubject.send(image)
+        self.selectedPhotosCount += 1
 
     })
   }

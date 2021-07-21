@@ -64,6 +64,20 @@ class MainViewController: UIViewController {
   @IBAction func actionSave() {
     guard let image = imagePreview.image else { return }
     
+    // 1 subscribe the PhotoWriter.save(_) future by sink
+    PhotoWriter.save(image)
+      .sink(receiveCompletion: { [unowned self] completion in
+        // 2 display alert in case of error
+        if case .failure(let error) = completion {
+          self.showMessage("Error", description: error.localizedDescription)
+        }
+        self.actionClear()
+      }, receiveValue: { [unowned self] id in
+        // In case you get back a value — the new asset id — let the user know their collage is saved successfully.
+        self.showMessage("Saved with id: \(id)")
+      })
+      .store(in: &subscriptions)
+
   }
   
   @IBAction func actionAdd() {
@@ -76,7 +90,21 @@ class MainViewController: UIViewController {
     let photos = storyboard!.instantiateViewController(
       withIdentifier: "PhotosViewController") as! PhotosViewController
 
+    // subscribe photos.$selectedPhotosCount
+    photos.$selectedPhotosCount
+      .filter { $0 > 0 }
+      .map { "Selected \($0) photos" }
+    // bind it to the view controller’s title property.
+      .assign(to: \.title, on: self)
+      .store(in: &subscriptions)
+
+    
     let newPhotos = photos.selectedPhotos
+      .prefix(while: { [unowned self] _ in
+        // keep the subscription to selectedPhotos alive as long as the total count of images selected is less than six.
+        return self.images.value.count < 6
+      })
+      .share()
 
     newPhotos
       .map { [unowned self] newImage in
@@ -88,15 +116,27 @@ class MainViewController: UIViewController {
       // 3 store the new subscription in subscriptions. However, the subscription will end whenever the user dismisses the presented view controller.
       .store(in: &subscriptions)
  
+    
+    newPhotos
+        // ignore emitted values, only providing a completion event to the subscriber.
+      .ignoreOutput()
+      .delay(for: 2.0, scheduler: DispatchQueue.main)
+      .sink(receiveCompletion: { [unowned self] _ in
+        // after 2 secs delay in main thread call method to update title with selected number of photos
+        self.updateUI(photos: self.images.value)
+      }, receiveValue: { _ in })
+      .store(in: &subscriptions)
+
+    
     navigationController!.pushViewController(photos, animated: true)
  
   }
   
   private func showMessage(_ title: String, description: String? = nil) {
-    let alert = UIAlertController(title: title, message: description, preferredStyle: .alert)
-    alert.addAction(UIAlertAction(title: "Close", style: .default, handler: { alert in
-      self.dismiss(animated: true, completion: nil)
-    }))
-    present(alert, animated: true, completion: nil)
+  
+    alert(title: title, text: description)
+      .sink(receiveValue: { _ in })
+      .store(in: &subscriptions)
+
   }
 }
